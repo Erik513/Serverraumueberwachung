@@ -20,7 +20,9 @@ subject = "Betreff"
 #ServerraumInfo
 sensornummer = "Sensor (1)"
 
-db_created = False
+db_DHT22_created = False
+last_warning_time = None
+warning_interval = 5 * 60  # 5 Minuten
 
 #Hauptprogramm
 if __name__ == "__main__":
@@ -28,7 +30,7 @@ if __name__ == "__main__":
         #Instanzen erstellen
         sensor_instance = DHT22_Sensor()
         email_notifier = Email_Notification()
-        db = SensorDatabase('SensorMessungen.db')
+        db_DHT22 = SensorDatabase('SensorMessungen.db')
         
         while True:
             #Datum
@@ -45,34 +47,47 @@ if __name__ == "__main__":
             #Temperatur auswerten
             temp_plus_minus = sensor_instance.get_temperature_deviation_plus_minus(f_temperature, temp_threshold_low, temp_threshold_high)
             temperature_deviation = sensor_instance.get_temperature_deviation(f_temperature, temp_threshold_low, temp_threshold_high)
+            
             #Datenbank Anlegen/erstellen
-            if db_created == False:
+            if not db_DHT22_created:
                 starttime_str = current_datetime.strftime('%X')
-                db.delete_table()
-                db.create_table()
-                db_created = True
+                email_text = f"Hallo User, im Anhang sind die aktuellen Daten zu finden."
+                email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Aktuelle Daten ({sensornummer})", email_text, "SensorMessungen.csv")
+                #db.delete_table()
+                db_DHT22.create_table()
+                db_DHT22_created = True
+            
+            db_DHT22.insert_measurement(r_temperature, r_humidity, temp_plus_minus, temperature_deviation)
+            db_DHT22.export_to_csv()
+
             #Temperatureabfrage durchführen
             if  f_temperature > temp_threshold_high:
-                warning_printed = True
-                db.insert_measurement(r_temperature, r_humidity, temp_plus_minus, temperature_deviation)
-                db.export_to_csv()
-                email_text = f"Hallo User, die Temperatur ist zu Hoch. Sie beträgt {r_temperature}°C."
-                email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Temperaturwarnung ({sensornummer})", email_text, "SensorMessungen.csv")
+                if last_warning_time is None or (current_datetime - last_warning_time).total_seconds() > warning_interval:
+                    last_warning_time = current_datetime
+                    warning_printed = True
+                    #db.insert_measurement(r_temperature, r_humidity, temp_plus_minus, temperature_deviation)
+                    #db.export_to_csv()
+                    email_text = f"Hallo User, die Temperatur ist zu Hoch. Sie beträgt {r_temperature}°C."
+                    email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Temperaturwarnung ({sensornummer})", email_text, "SensorMessungen.csv")
 
-                #logger.warning(f"WARNUNG: Die Temperatur ist zu hoch! Sie beträgt {r_temperature}°C")
-                #logger.info(f"Aktuelle Temperatur: {r_temperature}°C, Aktuelle Feuchtigkeit: {r_humidity}%")
+                    #logger.warning(f"WARNUNG: Die Temperatur ist zu hoch! Sie beträgt {r_temperature}°C")
+                    #logger.info(f"Aktuelle Temperatur: {r_temperature}°C, Aktuelle Feuchtigkeit: {r_humidity}%")
+                else:
+                    print(f"Email wurde bereits verschickt: {last_warning_time}")
+            
             elif f_temperature < temp_threshold_low:
-                warning_printed = True
-                db.insert_measurement(r_temperature, r_humidity, temp_plus_minus, temperature_deviation)
-                db.export_to_csv()
-                email_text = f"Hallo User, die Temperatur ist zu Niedrig. Sie beträgt {r_temperature}°C."
-                email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Temperaturwarnung ({sensornummer})", email_text, "SensorMessungen.csv")
+                if last_warning_time is None or (current_datetime - last_warning_time).total_seconds() > warning_interval:
+                    last_warning_time = current_datetime
+                    warning_printed = True
+                    #db.insert_measurement(r_temperature, r_humidity, temp_plus_minus, temperature_deviation)
+                    #db.export_to_csv()
+                    email_text = f"Hallo User, die Temperatur ist zu Niedrig. Sie beträgt {r_temperature}°C."
+                    email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Temperaturwarnung ({sensornummer})", email_text, "SensorMessungen.csv")
 
-                #logger.warning(f"WARNUNG: Die Temperatur ist zu niedrig! Sie beträgt {r_temperature}°C")
-                #logger.info(f"Aktuelle Temperatur: {r_temperature}°C, Aktuelle Feuchtigkeit: {r_humidity}%")                    
-            else:
-                db.insert_measurement(r_temperature, r_humidity, temp_plus_minus, temperature_deviation)
-                db.export_to_csv()
+                    #logger.warning(f"WARNUNG: Die Temperatur ist zu niedrig! Sie beträgt {r_temperature}°C")
+                    #logger.info(f"Aktuelle Temperatur: {r_temperature}°C, Aktuelle Feuchtigkeit: {r_humidity}%")  
+                else:
+                    print(f"Email wurde bereits verschickt: {last_warning_time}")
             
             #Test in der Console
             print(f"Aktuelle Temperatur: {r_temperature}°C (Exakt: {temperature}°C)")
@@ -82,8 +97,9 @@ if __name__ == "__main__":
 
             time.sleep(60)  # Warte 60 Sekunden zwischen den Messungen
             
-
     except KeyboardInterrupt:
         logger.info("Programm beendet.")
     except Exception as e:
         logger.error(f"Ein Fehler ist aufgetreten: {e}")
+
+    
