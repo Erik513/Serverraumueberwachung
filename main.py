@@ -51,14 +51,15 @@ if __name__ == "__main__":
             #Datenbank Anlegen/erstellen
             if not db_DHT22_created:
                 starttime_str = current_datetime.strftime('%X')
-                email_text = f"Hallo User, im Anhang sind die aktuellen Daten zu finden."
-                email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Aktuelle Daten ({sensornummer})", email_text, "SensorMessungen.csv")
-                #db.delete_table()
+                email_text = f"Hallo User, im Anhang sind die aktuellen Daten zu finden." 
+                #db_DHT22.delete_table()
                 db_DHT22.create_table()
                 db_DHT22_created = True
             
             db_DHT22.insert_measurement(r_temperature, r_humidity, temp_plus_minus, temperature_deviation)
             db_DHT22.export_to_csv()
+            db_DHT22.create_pdf()
+            email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Aktuelle Daten ({sensornummer})", email_text, "SensorMessungen.csv", "SensorMessungen.pdf")
 
             #Temperatureabfrage durchführen
             if  f_temperature > temp_threshold_high:
@@ -68,7 +69,7 @@ if __name__ == "__main__":
                     #db.insert_measurement(r_temperature, r_humidity, temp_plus_minus, temperature_deviation)
                     #db.export_to_csv()
                     email_text = f"Hallo User, die Temperatur ist zu Hoch. Sie beträgt {r_temperature}°C."
-                    email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Temperaturwarnung ({sensornummer})", email_text, "SensorMessungen.csv")
+                    email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Temperaturwarnung ({sensornummer})", email_text, "SensorMessungen.csv", "SensorMessungen.pdf")
 
                     #logger.warning(f"WARNUNG: Die Temperatur ist zu hoch! Sie beträgt {r_temperature}°C")
                     #logger.info(f"Aktuelle Temperatur: {r_temperature}°C, Aktuelle Feuchtigkeit: {r_humidity}%")
@@ -82,7 +83,7 @@ if __name__ == "__main__":
                     #db.insert_measurement(r_temperature, r_humidity, temp_plus_minus, temperature_deviation)
                     #db.export_to_csv()
                     email_text = f"Hallo User, die Temperatur ist zu Niedrig. Sie beträgt {r_temperature}°C."
-                    email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Temperaturwarnung ({sensornummer})", email_text, "SensorMessungen.csv")
+                    email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Temperaturwarnung ({sensornummer})", email_text, "SensorMessungen.csv", "SensorMessungen.pdf")
 
                     #logger.warning(f"WARNUNG: Die Temperatur ist zu niedrig! Sie beträgt {r_temperature}°C")
                     #logger.info(f"Aktuelle Temperatur: {r_temperature}°C, Aktuelle Feuchtigkeit: {r_humidity}%")  
@@ -101,5 +102,4 @@ if __name__ == "__main__":
         logger.info("Programm beendet.")
     except Exception as e:
         logger.error(f"Ein Fehler ist aufgetreten: {e}")
-
     

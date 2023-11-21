@@ -1,0 +1,127 @@
+import sqlite3
+import csv
+import io
+from datetime import datetime
+from Data import DHT22_Sensor
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.pdfgen import canvas
+
+#Datum
+current_datetime = datetime.now()
+
+class SensorDatabase: 
+    def __init__(self, db_name="SensorMessungen.csv"):
+        self.db_name = db_name
+        self.create_table()
+
+    def create_table(self):
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS SensorMessungen (
+                    ID INTEGER PRIMARY KEY,
+                    Datum DATETIME,
+                    Uhrzeit TEXT,
+                    Luftfeuchtigkeit REAL,
+                    Temperatur_in_C° REAL,
+                    Problem TEXT,
+                    Differenz TEXT
+                )
+            ''')
+            cursor.execute('SELECT Datum FROM SensorMessungen WHERE ID = 1')
+            first_date_in_db = cursor.fetchone()
+            cursor.execute('SELECT Uhrzeit FROM SensorMessungen WHERE ID = 1')
+            first_time_in_db = cursor.fetchone()
+            if first_date_in_db and first_time_in_db:
+                return f"Erstellung der Datenbank: {first_date_in_db[0]} {first_time_in_db[0]}"
+            else:
+                return None
+
+    def insert_measurement(self, r_temperature, r_humidity, temp_plus_minus, temperature_deviation):
+        current_datetime = datetime.now()
+        date_str = current_datetime.strftime('%d.%m.%Y')
+        time_str = current_datetime.strftime('%X')
+
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO SensorMessungen (Datum, Uhrzeit, Luftfeuchtigkeit, Temperatur_in_C°, Problem, Differenz)
+                VALUES (? , ?, ?, ?, ?, ?)
+            ''', (date_str, time_str, r_humidity, r_temperature, temp_plus_minus, temperature_deviation))
+
+    def export_to_csv(self, csv_filename="SensorMessungen.csv"):
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM SensorMessungen')
+
+            rows = cursor.fetchall()
+
+            if rows:
+                header = [description[0] for description in cursor.description]
+
+                with open(csv_filename, 'w', newline='') as csv_file:
+                    csv_writer = csv.writer(csv_file)
+                    csv_writer.writerow(header)
+                    csv_writer.writerows(rows)
+
+                print(f'Datenbank erfolgreich in CSV exportiert: {csv_filename}')
+            else:
+                print('Die Datenbank ist leer. Keine CSV-Datei erstellt.')
+    
+    def get_all_measurements(self):
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM SensorMessungen')
+            return cursor.fetchall()
+
+    def create_pdf(self):        
+        data = self.get_all_measurements()
+        pdf_filename = "SensorMessungen.pdf"
+        
+        # Erstellen Sie das PDF-Dokument
+        doc = SimpleDocTemplate(pdf_filename, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+
+        # Fügen Sie einen Titel hinzu
+        current_date = current_datetime.strftime('%d.%m.%Y (%X)')
+        title_text = f"<u>Sensormessungen</u><br/><font size='8'>Stand: <font size='8' color='blue'>{current_date}</font></font>"
+        title = Paragraph(title_text, styles['Title'])
+        elements.append(title)
+
+        elements.append(Spacer(1, 12))
+
+        # Fügen Sie zusätzlichen Text mittig über der Tabelle hinzu
+        
+        additional_text = f"{SensorDatabase.create_table(self)}"
+        text = Paragraph(additional_text, styles['Normal'])
+        elements.append(text)
+
+        # Fügen Sie eine leere Fläche in der Mitte des Dokuments hinzu
+        elements.append(Spacer(1, doc.height / 16))
+
+        # Erstellen Sie eine Tabelle und fügen Sie Daten hinzu
+        header = ["ID", "Datum", "Uhrzeit", "Luftfeuchtigkeit in %", "Temperatur in C°", "Problem", "Differenz"]
+        table_data = [header] + [list(map(str, row)) for row in data]
+        table = Table(table_data)
+
+        # Fügen Sie Gridlines zur Tabelle hinzu
+        style = TableStyle([('GRID', (0, 0), (-1, -1), 1, colors.black)])
+        table.setStyle(style)
+
+        # Fügen Sie die Tabelle zum PDF hinzu
+        elements.append(table)
+
+        # Erstellen Sie das PDF-Dokument
+        doc.build(elements)
+
+        print(f'Datenbank erfolgreich in PDF exportiert: {pdf_filename}')
+        return pdf_filename
+    
+    def delete_table(self):
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('DROP TABLE SensorMessungen')

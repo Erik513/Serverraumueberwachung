@@ -1,3 +1,3 @@
-from .DHT22_Init import DHT22_Sensor 
+from .DHT22_Data import DHT22_Sensor 
 from .Email import Email_Notification
-from .Sensordb import SensorDatabase
+from .DB_Sensor_DHT22 import SensorDatabase
