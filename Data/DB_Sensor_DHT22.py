@@ -1,13 +1,16 @@
 import sqlite3
 import csv
-import io
 from datetime import datetime
-from Data import DHT22_Sensor
+#csv
+from cryptography.fernet import Fernet
+#pdf
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.pdfgen import canvas
+#excel
+import openpyxl
+from openpyxl.utils import get_column_letter
 
 #Datum
 current_datetime = datetime.now()
@@ -56,37 +59,43 @@ class SensorDatabase:
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM SensorMessungen')
-
             rows = cursor.fetchall()
-
             if rows:
                 header = [description[0] for description in cursor.description]
-
+                # Schreiben Sie die Daten in die CSV-Datei
                 with open(csv_filename, 'w', newline='') as csv_file:
                     csv_writer = csv.writer(csv_file)
                     csv_writer.writerow(header)
                     csv_writer.writerows(rows)
 
-                print(f'Datenbank erfolgreich in CSV exportiert: {csv_filename}')
+                print(f'Datenbank erfolgreich in verschlüsselter CSV exportiert: {csv_filename}')
             else:
                 print('Die Datenbank ist leer. Keine CSV-Datei erstellt.')
-    
+
     def get_all_measurements(self):
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM SensorMessungen')
             return cursor.fetchall()
-
-    def create_pdf(self):        
+    
+    @staticmethod
+    def generate_password():
+        import random
+        import string
+        characters = string.ascii_letters + string.digits
+        password = ''.join(random.choice(characters) for _ in range(6))
+        return password
+    
+    def create_pdf(self, password):        
         data = self.get_all_measurements()
         pdf_filename = "SensorMessungen.pdf"
-        
-        # Erstellen Sie das PDF-Dokument
-        doc = SimpleDocTemplate(pdf_filename, pagesize=letter)
+
+        #Erstellen Sie das PDF-Dokument mit Verschlüsselung    
+        doc = SimpleDocTemplate(pdf_filename, pagesize=letter, encrypt=password)
         elements = []
         styles = getSampleStyleSheet()
 
-        # Fügen Sie einen Titel hinzu
+        #Fügen Sie einen Titel hinzu
         current_date = current_datetime.strftime('%d.%m.%Y (%X)')
         title_text = f"<u>Sensormessungen</u><br/><font size='8'>Stand: <font size='8' color='blue'>{current_date}</font></font>"
         title = Paragraph(title_text, styles['Title'])
@@ -94,8 +103,7 @@ class SensorDatabase:
 
         elements.append(Spacer(1, 12))
 
-        # Fügen Sie zusätzlichen Text mittig über der Tabelle hinzu
-        
+        #Fügen Sie zusätzlichen Text mittig über der Tabelle hinzu
         additional_text = f"{SensorDatabase.create_table(self)}"
         text = Paragraph(additional_text, styles['Normal'])
         elements.append(text)
@@ -120,7 +128,44 @@ class SensorDatabase:
 
         print(f'Datenbank erfolgreich in PDF exportiert: {pdf_filename}')
         return pdf_filename
-    
+
+    def create_excel(self, excel_filename="SensorMessungen.xlsx"):
+        data = self.get_all_measurements()
+        
+        # Erstellen Sie eine neue Arbeitsmappe
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+
+        # Schreiben Sie die Überschriften
+        header = ["ID", "Datum", "Uhrzeit", "Luftfeuchtigkeit in %", "Temperatur in C°", "Problem", "Differenz"]
+        sheet.append(header)
+
+        # Holen Sie alle Messungen aus der Datenbank
+        data = self.get_all_measurements()
+
+        # Schreiben Sie die Daten in die Tabelle
+        for row in data:
+            sheet.append(row)
+
+        # Passen Sie die Spaltenbreite basierend auf dem Header an
+        for col_num, column_title in enumerate(header, 1):
+            col_letter = get_column_letter(col_num)
+            max_length = 0
+            for cell in sheet[col_letter]:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(cell.value)
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            sheet.column_dimensions[col_letter].width = adjusted_width
+
+        # Speichern Sie die Excel-Datei
+        workbook.save(excel_filename)
+
+        print(f'Datenbank erfolgreich in Excel exportiert: {excel_filename}')
+        return excel_filename
+
     def delete_table(self):
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()

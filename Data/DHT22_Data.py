@@ -23,9 +23,9 @@ class DHT22_Sensor:
         to_high = f_temperature - temp_threshold_high
         to_low = f_temperature - temp_threshold_low
         if f_temperature > temp_threshold_high:
-            temperature_deviation = to_high
+            temperature_deviation = round(to_high, 2)
         elif f_temperature < temp_threshold_low:
-            temperature_deviation = to_low
+            temperature_deviation = round(to_low, 2)
         else:
             temperature_deviation = "   "
         return temperature_deviation

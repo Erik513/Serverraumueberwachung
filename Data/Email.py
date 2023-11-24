@@ -1,17 +1,13 @@
-import sqlite3
-import csv
-from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.mime.base import MIMEBase
 from email import encoders
 import smtplib
-from Data.DB_Sensor_DHT22 import SensorDatabase
 
 class Email_Notification:
     @staticmethod
-    def send_email(sender_address, receiver_address, email_subject, email_text, csv_filename="SensorMessungen.csv", pdf_filename="SensorMessungen.pdf"):
+    def send_email(sender_address, receiver_address, email_subject, multi_line_text, csv_filename="SensorMessungen.csv", pdf_filename="SensorMessungen.pdf", excel_filename="SensorMessungen.xlsx"):
         #E-Mail erstellen
         mail = MIMEMultipart()
         mail['Subject'] = email_subject
@@ -19,7 +15,7 @@ class Email_Notification:
         mail['To'] = receiver_address
 
         #E-Mail-Text hinzufügen
-        mail.attach(MIMEText(email_text, 'plain'))
+        mail.attach(MIMEText(multi_line_text, 'plain'))
 
         #CSV-Anhang hinzufügen
         if csv_filename:
@@ -38,6 +34,15 @@ class Email_Notification:
             pdf_attachment.close()
             pdf_attachment_data.add_header('Content-Disposition', f'attachment; filename={pdf_filename}')
             mail.attach(pdf_attachment_data)
+            attachment.close()
+
+        #Excel-Anhang hinzufügen
+        if excel_filename:
+            excel_attachment = open(excel_filename, 'rb')
+            excel_attachment_data = MIMEApplication(excel_attachment.read(), _subtype="xlsx")
+            excel_attachment.close()
+            excel_attachment_data.add_header('Content-Disposition', f'attachment; filename={excel_filename}')
+            mail.attach(excel_attachment_data)
             attachment.close()
 
         #E-Mail senden
