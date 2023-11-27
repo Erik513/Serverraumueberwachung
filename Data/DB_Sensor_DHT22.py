@@ -30,7 +30,7 @@ class SensorDatabase:
                     Uhrzeit TEXT,
                     Luftfeuchtigkeit REAL,
                     Temperatur_in_C° REAL,
-                    Problem TEXT,
+                    Abweichung TEXT,
                     Differenz TEXT
                 )
             ''')
@@ -39,9 +39,37 @@ class SensorDatabase:
             cursor.execute('SELECT Uhrzeit FROM SensorMessungen WHERE ID = 1')
             first_time_in_db = cursor.fetchone()
             if first_date_in_db and first_time_in_db:
-                return f"Erstellung der Datenbank: {first_date_in_db[0]} {first_time_in_db[0]}"
+                return f"Erstellungdatum der Datenbank: {first_date_in_db[0]}, {first_time_in_db[0]}"
             else:
                 return None
+            
+    def get_highest_hum(self):
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT MAX(Luftfeuchtigkeit) FROM SensorMessungen')
+            max_hum = cursor.fetchone()[0]
+            return max_hum
+
+    def get_lowest_hum(self):
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT MIN(Luftfeuchtigkeit) FROM SensorMessungen')
+            min_hum = cursor.fetchone()[0]
+            return min_hum
+        
+    def get_highest_temp(self):
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT MAX(Temperatur_in_C°) FROM SensorMessungen')
+            max_temp = cursor.fetchone()[0]
+            return max_temp
+    
+    def get_lowest_temp(self):
+        with sqlite3.connect(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT MIN(Temperatur_in_C°) FROM SensorMessungen')
+            min_temp = cursor.fetchone()[0]
+            return min_temp
 
     def insert_measurement(self, r_temperature, r_humidity, temp_plus_minus, temperature_deviation):
         current_datetime = datetime.now()
@@ -51,9 +79,10 @@ class SensorDatabase:
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO SensorMessungen (Datum, Uhrzeit, Luftfeuchtigkeit, Temperatur_in_C°, Problem, Differenz)
+                INSERT INTO SensorMessungen (Datum, Uhrzeit, Luftfeuchtigkeit, Temperatur_in_C°, Abweichung, Differenz)
                 VALUES (? , ?, ?, ?, ?, ?)
             ''', (date_str, time_str, r_humidity, r_temperature, temp_plus_minus, temperature_deviation))
+            print('Daten in die Datenbank gefüllt.')
 
     def export_to_csv(self, csv_filename="SensorMessungen.csv"):
         with sqlite3.connect(self.db_name) as conn:
@@ -68,7 +97,7 @@ class SensorDatabase:
                     csv_writer.writerow(header)
                     csv_writer.writerows(rows)
 
-                print(f'Datenbank erfolgreich in verschlüsselter CSV exportiert: {csv_filename}')
+                print(f'Datenbank in CSV-Datei exportiert: {csv_filename}')
             else:
                 print('Die Datenbank ist leer. Keine CSV-Datei erstellt.')
 
@@ -95,7 +124,7 @@ class SensorDatabase:
         elements = []
         styles = getSampleStyleSheet()
 
-        #Fügen Sie einen Titel hinzu
+        #Überschrift Text
         current_date = current_datetime.strftime('%d.%m.%Y (%X)')
         title_text = f"<u>Sensormessungen</u><br/><font size='8'>Stand: <font size='8' color='blue'>{current_date}</font></font>"
         title = Paragraph(title_text, styles['Title'])
@@ -103,20 +132,28 @@ class SensorDatabase:
 
         elements.append(Spacer(1, 12))
 
-        #Fügen Sie zusätzlichen Text mittig über der Tabelle hinzu
-        additional_text = f"{SensorDatabase.create_table(self)}"
+        #Main Text
+        additional_text = f"""
+        {SensorDatabase.create_table(self)}<br/>
+        <br/>
+        <br/>
+        Extremwerte (Niedrigste / Höchste):<br/>
+        <br/>
+        Luftfeuchtigkeit: {SensorDatabase.get_lowest_hum(self)} / {SensorDatabase.get_highest_hum(self)} % <br/>
+        Temperatur: {SensorDatabase.get_lowest_temp(self)} / {SensorDatabase.get_highest_temp(self)} C° <br/>
+        """
         text = Paragraph(additional_text, styles['Normal'])
         elements.append(text)
 
-        # Fügen Sie eine leere Fläche in der Mitte des Dokuments hinzu
-        elements.append(Spacer(1, doc.height / 16))
+        #Leere Fläche
+        elements.append(Spacer(1, doc.height / 20))
 
-        # Erstellen Sie eine Tabelle und fügen Sie Daten hinzu
-        header = ["ID", "Datum", "Uhrzeit", "Luftfeuchtigkeit in %", "Temperatur in C°", "Problem", "Differenz"]
+        #Eine Tabelle erstellen und Daten hinzufügen
+        header = ["ID", "Datum", "Uhrzeit", "Luftfeuchtigkeit in %", "Temperatur in C°", "Abweichung", "Differenz"]
         table_data = [header] + [list(map(str, row)) for row in data]
         table = Table(table_data)
 
-        # Fügen Sie Gridlines zur Tabelle hinzu
+        #Gridlines zur Tabelle hinzufügen
         style = TableStyle([('GRID', (0, 0), (-1, -1), 1, colors.black)])
         table.setStyle(style)
 
@@ -126,7 +163,7 @@ class SensorDatabase:
         # Erstellen Sie das PDF-Dokument
         doc.build(elements)
 
-        print(f'Datenbank erfolgreich in PDF exportiert: {pdf_filename}')
+        print(f'Datenbank in verschlüsselter PDF-Datei exportiert: {pdf_filename}')
         return pdf_filename
 
     def create_excel(self, excel_filename="SensorMessungen.xlsx"):
@@ -137,7 +174,7 @@ class SensorDatabase:
         sheet = workbook.active
 
         # Schreiben Sie die Überschriften
-        header = ["ID", "Datum", "Uhrzeit", "Luftfeuchtigkeit in %", "Temperatur in C°", "Problem", "Differenz"]
+        header = ["ID", "Datum", "Uhrzeit", "Luftfeuchtigkeit in %", "Temperatur in C°", "Abweichung", "Differenz"]
         sheet.append(header)
 
         # Holen Sie alle Messungen aus der Datenbank
@@ -163,10 +200,11 @@ class SensorDatabase:
         # Speichern Sie die Excel-Datei
         workbook.save(excel_filename)
 
-        print(f'Datenbank erfolgreich in Excel exportiert: {excel_filename}')
+        print(f'Datenbank in Excel-Datei exportiert: {excel_filename}')
         return excel_filename
 
     def delete_table(self):
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
             cursor.execute('DROP TABLE SensorMessungen')
+            print(f'Datenbank gelöscht.')
