@@ -136,9 +136,9 @@ class SensorDatabase:
         additional_text = f"""
         {SensorDatabase.create_table(self)}<br/>
         <br/>
+        Zulässige Temperaturen: {18} - {22} C° <br/>
         <br/>
-        Extremwerte (Niedrigste / Höchste):<br/>
-        <br/>
+        <u>Extremwerte (Niedrigste / Höchste):</u><br/>
         Luftfeuchtigkeit: {SensorDatabase.get_lowest_hum(self)} / {SensorDatabase.get_highest_hum(self)} % <br/>
         Temperatur: {SensorDatabase.get_lowest_temp(self)} / {SensorDatabase.get_highest_temp(self)} C° <br/>
         """
