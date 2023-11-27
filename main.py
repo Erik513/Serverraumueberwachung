@@ -31,6 +31,12 @@ db_DHT22_created = False
 current_data_sended = False
 
 #Hauptprogramm
+
+#Zugänglichkeit von außen ermöglichen
+def main():
+    global temp_threshold_high 
+    global temp_threshold_low
+
 if __name__ == "__main__":
     try:
         #Instanzen erstellen
@@ -80,7 +86,6 @@ if __name__ == "__main__":
                 {message_text}
 
                 Stand: {current_date}
-                Erstellung der Datenbank: {date_str}, {starttime_str}
                 Zulässige Temperaturen: {temp_threshold_low} - {temp_threshold_high} °C
                 Momentane Luftfeuchtigkeit: {r_humidity} %
                 Momentane Temperatur: {r_temperature} °C
@@ -105,7 +110,6 @@ if __name__ == "__main__":
                     {message_text}
 
                     Stand: {current_date}
-                    Erstellung der Datenbank: {date_str}, {starttime_str}
                     Zulässige Temperaturen: {temp_threshold_low} - {temp_threshold_high} °C
                     Momentane Luftfeuchtigkeit: {r_humidity} %
                     Momentane Temperatur: {r_temperature} °C
@@ -129,7 +133,6 @@ if __name__ == "__main__":
                     {message_text}
 
                     Stand: {current_date}
-                    Erstellung der Datenbank: {date_str}, {starttime_str}
                     Zulässige Temperaturen: {temp_threshold_low} - {temp_threshold_high} °C
                     Momentane Luftfeuchtigkeit: {r_humidity} %
                     Momentane Temperatur: {r_temperature} °C

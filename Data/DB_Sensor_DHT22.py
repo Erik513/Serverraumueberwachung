@@ -39,7 +39,7 @@ class SensorDatabase:
             cursor.execute('SELECT Uhrzeit FROM SensorMessungen WHERE ID = 1')
             first_time_in_db = cursor.fetchone()
             if first_date_in_db and first_time_in_db:
-                return f"Erstellungdatum der Datenbank: {first_date_in_db[0]}, {first_time_in_db[0]}"
+                return f"Erstellungsdatum der Datenbank: {first_date_in_db[0]}, {first_time_in_db[0]}"
             else:
                 return None
             
@@ -131,12 +131,12 @@ class SensorDatabase:
         elements.append(title)
 
         elements.append(Spacer(1, 12))
-
+        from main import temp_threshold_low, temp_threshold_high
         #Main Text
         additional_text = f"""
         {SensorDatabase.create_table(self)}<br/>
         <br/>
-        Zulässige Temperaturen: {18} - {22} C° <br/>
+        Zulässige Temperaturen: {temp_threshold_low} - {temp_threshold_high} C° <br/>
         <br/>
         <u>Extremwerte (Niedrigste / Höchste):</u><br/>
         Luftfeuchtigkeit: {SensorDatabase.get_lowest_hum(self)} / {SensorDatabase.get_highest_hum(self)} % <br/>
