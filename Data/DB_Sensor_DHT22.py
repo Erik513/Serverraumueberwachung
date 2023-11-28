@@ -5,7 +5,7 @@ from datetime import datetime
 from cryptography.fernet import Fernet
 #pdf
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter, inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 #excel
@@ -142,8 +142,8 @@ class SensorDatabase:
         Luftfeuchtigkeit: {SensorDatabase.get_lowest_hum(self)} / {SensorDatabase.get_highest_hum(self)} % <br/>
         Temperatur: {SensorDatabase.get_lowest_temp(self)} / {SensorDatabase.get_highest_temp(self)} C° <br/>
         """
-        text = Paragraph(additional_text, styles['Normal'])
-        elements.append(text)
+        main_text = Paragraph(additional_text, styles['Normal'])
+        elements.append(main_text)
 
         #Leere Fläche
         elements.append(Spacer(1, doc.height / 20))
@@ -155,6 +155,17 @@ class SensorDatabase:
 
         #Gridlines zur Tabelle hinzufügen
         style = TableStyle([('GRID', (0, 0), (-1, -1), 1, colors.black)])
+
+        for row in range(1, len(table_data)):
+            humidity_value = float(table_data[row][3])
+            temperature_value = float(table_data[row][4])
+            humidity_color_column = 3 
+            temperature_color_column = 4 
+            table_data[row][humidity_color_column] = self.get_humidity_color(humidity_value)
+            table_data[row][temperature_color_column] = self.get_temperature_color(temperature_value)
+            style.add('BACKGROUND', (humidity_color_column, row), (humidity_color_column, row), self.get_humidity_color(humidity_value))
+            style.add('BACKGROUND', (temperature_color_column, row), (temperature_color_column, row), self.get_temperature_color(temperature_value))
+
         table.setStyle(style)
 
         # Fügen Sie die Tabelle zum PDF hinzu
@@ -165,7 +176,48 @@ class SensorDatabase:
 
         print(f'Datenbank in verschlüsselter PDF-Datei exportiert: {pdf_filename}')
         return pdf_filename
-
+    
+    def get_humidity_color(self, humidity_value):
+        if 0 <= humidity_value <= 10:
+            return colors.red
+        elif 10 < humidity_value <= 30:
+            return colors.orange
+        elif 30 < humidity_value <= 40:
+            return colors.yellow
+        elif 40 < humidity_value <= 60:
+            return colors.green
+        elif 60 < humidity_value <= 80:
+            return colors.darkcyan
+        elif 80 < humidity_value <= 90:
+            return colors.blue
+        elif 90 < humidity_value <= 100:
+            return colors.darkblue
+        else:
+            return colors.white
+    
+    def get_temperature_color(self, temperature_value):
+        from main import temp_threshold_low, temp_threshold_high
+        if temperature_value < temp_threshold_low - 10:
+            return colors.darkblue
+        if temp_threshold_low - 10 <= temperature_value < temp_threshold_low - 5:
+            return colors.blue
+        if temp_threshold_low - 5 <= temperature_value < temp_threshold_low - 2:
+            return colors.darkcyan
+        elif temp_threshold_low - 2 <= temperature_value < temp_threshold_low:
+            return colors.cyan
+        elif temp_threshold_low <= temperature_value <= temp_threshold_high:
+            return colors.green
+        elif temp_threshold_high < temperature_value <= temp_threshold_high + 2:
+            return colors.yellowgreen
+        elif temp_threshold_high + 2 < temperature_value <= temp_threshold_high + 5:
+            return colors.yellow
+        elif temp_threshold_high + 5 < temperature_value <= temp_threshold_high + 10:
+            return colors.orange
+        elif temp_threshold_high + 10 < temperature_value:
+            return colors.red
+        else:
+            return colors.white 
+          
     def create_excel(self, excel_filename="SensorMessungen.xlsx"):
         data = self.get_all_measurements()
         

@@ -30,6 +30,7 @@ sensornummer = "Sensor (1)"
 db_DHT22_created = False
 current_data_sended = False
 test_bool = False
+
 #Hauptprogramm
 
 #Zugänglichkeit von außen ermöglichen
