@@ -4,10 +4,24 @@ from email.mime.application import MIMEApplication
 from email.mime.base import MIMEBase
 from email import encoders
 import smtplib
+import urllib.request
+
+
+def check_internet_connection():
+    try:
+        urllib.request.urlopen('http://www.google.com', timeout=1)
+        return True
+    except urllib.error.URLError:
+        return False
 
 class Email_Notification:
     @staticmethod
     def send_email(sender_address, receiver_address, email_subject, multi_line_text, csv_filename="SensorMessungen.csv", pdf_filename="SensorMessungen.pdf", excel_filename="SensorMessungen.xlsx"):
+        # Überprüfe die Internetverbindung
+        if not check_internet_connection():
+            print("Keine Internetverbindung verfügbar. E-Mail wird nicht versendet.")
+            return
+        
         #E-Mail erstellen
         mail = MIMEMultipart()
         mail['Subject'] = email_subject
@@ -44,15 +58,27 @@ class Email_Notification:
             excel_attachment_data.add_header('Content-Disposition', f'attachment; filename={excel_filename}')
             mail.attach(excel_attachment_data)
             attachment.close()
+        
+        try:
+            sender = smtplib.SMTP("smtp.zoho.eu", 587)
+            sender.ehlo()
+            sender.starttls()
+            sender.ehlo()
 
-        #E-Mail senden
-        sender = smtplib.SMTP("smtp.zoho.eu", 587)
-        sender.ehlo()
-        sender.starttls()
-        sender.ehlo()
+            sender.login(sender_address, "MeinPasswort2023")
+            sender.send_message(mail)
 
-        sender.login(sender_address,"MeinPasswort2023")
-        sender.send_message(mail)
-        sender.close()
-
-        print(f'E-Mail erfolgreich versendet: {email_subject}')
+            print(f'E-Mail erfolgreich versendet: {email_subject}')
+        
+        except smtplib.SMTPConnectError as e:
+            print(f"Fehler beim Verbinden zum SMTP-Server: {e}")
+        except smtplib.SMTPAuthenticationError as e:
+            print(f"Fehler bei der SMTP-Authentifizierung: {e}")
+        except Exception as e:
+            print(f"Allgemeiner Fehler beim E-Mail-Versand: {e}")
+        finally:
+            # Schließe die Verbindung, wenn sie geöffnet ist
+            if 'sender' in locals() and isinstance(sender, smtplib.SMTP):
+                sender.quit()
+             
+            

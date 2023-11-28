@@ -29,7 +29,7 @@ sensornummer = "Sensor (1)"
 #Booleans
 db_DHT22_created = False
 current_data_sended = False
-
+test_bool = False
 #Hauptprogramm
 
 #Zugänglichkeit von außen ermöglichen
@@ -103,7 +103,7 @@ if __name__ == "__main__":
             if  f_temperature > temp_threshold_high:
                 if last_warning_time is None or (current_datetime - last_warning_time).total_seconds() > warning_interval:
                     last_warning_time = current_datetime
-                    
+                    current_date = current_datetime.strftime('%d.%m.%Y (%X)')
                     message_text = f"Hallo User, die Temperatur ist zu Hoch. Sie beträgt {r_temperature}°C."
                     #Mehrzeiliger Text
                     email_text = f"""
@@ -127,6 +127,7 @@ if __name__ == "__main__":
             elif f_temperature < temp_threshold_low:
                 if last_warning_time is None or (current_datetime - last_warning_time).total_seconds() > warning_interval:
                     last_warning_time = current_datetime
+                    current_date = current_datetime.strftime('%d.%m.%Y (%X)')
                     message_text = f"Hallo User, die Temperatur ist zu Niedrig. Sie beträgt {r_temperature}°C."
                     #Mehrzeiliger Text
                     email_text = f"""
@@ -143,7 +144,8 @@ if __name__ == "__main__":
                     db_DHT22.export_to_csv()
                     db_DHT22.create_pdf(password)
                     db_DHT22.create_excel()
-                    email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Temperaturwarnung ({sensornummer})", email_text,"SensorMessungen.csv", "SensorMessungen.pdf", "SensorMessungen.xlsx")
+                    email_notifier.send_email("test_email10@zohomail.eu", "test_email10@zohomail.eu", f"Temperaturwarnung ({sensornummer})", email_text, "SensorMessungen.csv", "SensorMessungen.pdf", "SensorMessungen.xlsx")
+                else:
                     print(f"Email wurde bereits verschickt: {last_warning_time}")
 
             #Test in der Console
